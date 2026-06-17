@@ -113,6 +113,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(id);
   }, [token, doRefresh]);
 
+
+  
   const register = useCallback(async (data: RegisterInput) => {
     return apiRequest<{ email: string }>('/api/auth/register', { method: 'POST', body: data });
   }, []);
