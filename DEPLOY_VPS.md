@@ -15,49 +15,66 @@ Internet ──► Nginx (TLS, rate-limit, WS, optional WAF) ──► API (Node
 - Docker + Docker Compose plugin: `curl -fsSL https://get.docker.com | sh`.
 - Ports **80** and **443** open.
 
+> **No domain? You don't need one.** Your VPS already has a public hostname that
+> resolves to its IP (e.g. Hostinger's `srvXXXXX.hstgr.cloud`). Let's Encrypt issues
+> a real cert for it — set `DOMAIN` to that hostname. Swap to `taxilik.ma` later.
+
 ## 2. Get the code + configure
 ```bash
 sudo mkdir -p /opt/taxilik && cd /opt/taxilik
 git clone <your-repo> .
-cp .env.example .env                 # MONGO/REDIS passwords, CORS_ORIGINS
+cp .env.example .env                 # set DOMAIN, MONGO/REDIS passwords, CORS_ORIGINS
 cp backend/.env.example backend/.env # JWT_SECRET, SMTP_*, fare config…
 ```
-Set strong values in `.env` (`MONGO_PASSWORD`, `REDIS_PASSWORD`) and `backend/.env`
-(a long random `JWT_SECRET`, your SMTP creds). In `backend/.env`, **leave
-`MONGO_URI`/`REDIS_URL`/`UPLOAD_DIR` unset** — compose injects the correct internal
-values. Edit `nginx/nginx.conf` and replace `taxilik.ma` with your domain.
+In `.env` set **`DOMAIN=srv1765015.hstgr.cloud`** (your VPS hostname), strong
+`MONGO_PASSWORD`/`REDIS_PASSWORD`, and `CORS_ORIGINS`. In `backend/.env` set a long
+random `JWT_SECRET` + SMTP creds, and **leave `MONGO_URI`/`REDIS_URL`/`UPLOAD_DIR`
+unset** (compose injects them). No nginx editing — it reads `${DOMAIN}`.
 
-## 3. TLS certificate (Let's Encrypt)
+## 3. Open the firewall
+Allow 22/80/443 in the **Hostinger panel → Firewall**, and on the host:
 ```bash
-# one-time cert issue (uses the certbot webroot mounted by compose)
-docker run --rm -v $(pwd)/certbot/conf:/etc/letsencrypt -v $(pwd)/certbot/www:/var/www/certbot \
-  certbot/certbot certonly --webroot -w /var/www/certbot -d taxilik.ma -d www.taxilik.ma \
-  --email you@taxilik.ma --agree-tos --no-eff-email
+ufw allow 22,80,443/tcp && ufw --force enable
 ```
-(Renew via a weekly cron running the same command with `renew`.)
 
-## 4. Launch
+## 4. TLS certificate (Let's Encrypt — one-time, before first boot)
+nginx needs the cert to exist before it starts, so issue it **standalone** while
+port 80 is free (stack not up yet):
+```bash
+DOMAIN=srv1765015.hstgr.cloud
+docker run --rm -p 80:80 -v $(pwd)/certbot/conf:/etc/letsencrypt \
+  certbot/certbot certonly --standalone -d "$DOMAIN" \
+  --email you@example.com --agree-tos --no-eff-email
+```
+
+## 5. Launch
 ```bash
 docker compose up -d --build
 docker compose logs -f api        # watch boot: Mongo + Redis adapter + SMTP
 ```
-Health: `https://taxilik.ma/health` → `{"status":"ok"}`.
+Health: `https://srv1765015.hstgr.cloud/health` → `{"status":"ok"}`.
 
-Create an admin and approve a driver (inside the api container or with Mongo URI):
+Renew the cert (cron, weekly) — uses the webroot while nginx runs:
 ```bash
-docker compose exec api node src/scripts/createAdmin.js you@taxilik.ma 'StrongPass!'
-docker compose exec api node src/scripts/approveDriver.js driver@example.ma
+docker run --rm -v $(pwd)/certbot/conf:/etc/letsencrypt -v $(pwd)/certbot/www:/var/www/certbot \
+  certbot/certbot renew --webroot -w /var/www/certbot && docker compose exec nginx nginx -s reload
 ```
 
-## 5. Point the apps at it
-- Web build / mobile: set `EXPO_PUBLIC_API_URL=https://taxilik.ma`.
-- Add your web origin(s) to `CORS_ORIGINS`.
+Create an admin and approve a driver:
+```bash
+docker compose exec api node src/scripts/createAdmin.js you@example.com 'StrongPass!'
+docker compose exec api node src/scripts/approveDriver.js driver@example.com
+```
 
-## 6. CI/CD (auto-deploy on push)
+## 6. Point the apps at it
+- Build with `EXPO_PUBLIC_API_URL=https://srv1765015.hstgr.cloud`.
+- Add your web origin(s) to `CORS_ORIGINS` in `.env`.
+
+## 7. CI/CD (auto-deploy on push)
 `.github/workflows/vps-deploy.yml` SSHes in and runs `git pull && docker compose up -d --build`.
 Add repo **secrets** `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` and **var** `DEPLOY_PATH=/opt/taxilik`.
 
-## 7. Load balancing (scale the API)
+## 8. Load balancing (scale the API)
 The Redis adapter makes multi-instance Socket.IO correct, and **nginx already
 load-balances** across replicas (it re-resolves `api` via Docker DNS each request):
 ```bash
@@ -65,7 +82,7 @@ docker compose up -d --scale api=3
 ```
 No nginx change needed — new replicas join the rotation automatically.
 
-## 8. WAF (free — OWASP ModSecurity Core Rule Set)
+## 9. WAF (free — OWASP ModSecurity Core Rule Set)
 The stack ships a switchable edge via Compose **profiles**:
 - `COMPOSE_PROFILES=plain` → the hand-tuned nginx (TLS, rate-limit, WS, LB). Default.
 - `COMPOSE_PROFILES=waf`  → `owasp/modsecurity-crs:nginx` (TLS + **OWASP CRS WAF** + WS
@@ -77,7 +94,7 @@ watch `docker compose logs -f waf` for rule hits on real traffic, then set
 `MODSEC_RULE_ENGINE=On` once false positives are tuned. (The WAF proxies `/uploads`
 to the API, which serves them.)
 
-## 9. Automated MongoDB backups
+## 10. Automated MongoDB backups
 The `mongo-backup` service runs `mongodump` on a schedule into the `mongo-backups`
 volume with retention (defaults: daily, keep 7 days — tune `BACKUP_INTERVAL` /
 `BACKUP_KEEP_DAYS` in `.env`).
@@ -91,7 +108,7 @@ docker compose exec mongo sh -c 'mongorestore --uri "$MONGO_URI" --gzip --archiv
 ```
 For off-site durability, sync the volume to object storage (S3/Backblaze) from cron.
 
-## 10. Hardening summary
+## 11. Hardening summary
 - **App** (built in): Helmet headers, CORS allow-list, NoSQL-injection sanitize,
   body-size limits, **Redis-backed rate-limiting** (tight on `/api/auth/*`),
   **15-min access tokens + rotating refresh tokens**, graceful shutdown, structured
@@ -100,7 +117,7 @@ For off-site durability, sync the volume to object storage (S3/Backblaze) from c
 - **Network**: Mongo/Redis are never published — internal Docker network only.
   **Firewall the host**: allow only 22/80/443 (`ufw allow 22,80,443/tcp`).
 
-## 11. After pulling these changes (one-time)
+## 12. After pulling these changes (one-time)
 The backend has new dependencies — install them:
 ```bash
 cd backend && npm install   # @socket.io/redis-adapter, ioredis, helmet,
