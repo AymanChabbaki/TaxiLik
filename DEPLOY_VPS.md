@@ -57,23 +57,50 @@ docker compose exec api node src/scripts/approveDriver.js driver@example.ma
 `.github/workflows/vps-deploy.yml` SSHes in and runs `git pull && docker compose up -d --build`.
 Add repo **secrets** `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` and **var** `DEPLOY_PATH=/opt/taxilik`.
 
-## 7. Scaling & hardening
-- **Scale the API**: `docker compose up -d --scale api=3`. The **Redis adapter** makes
-  multi-instance Socket.IO correct; switch the nginx upstream to use the Docker
-  resolver (`resolver 127.0.0.11; set $u http://taxilik_api; proxy_pass $u;`) so it
-  load-balances across replicas.
-- **WAF**: swap the `nginx` image for `owasp/modsecurity-crs:nginx` (OWASP CRS
-  preloaded) to get managed WAF rules in front of the API.
-- **Already built in**: Helmet headers, CORS allow-list, NoSQL-injection sanitize,
+## 7. Load balancing (scale the API)
+The Redis adapter makes multi-instance Socket.IO correct, and **nginx already
+load-balances** across replicas (it re-resolves `api` via Docker DNS each request):
+```bash
+docker compose up -d --scale api=3
+```
+No nginx change needed — new replicas join the rotation automatically.
+
+## 8. WAF (free — OWASP ModSecurity Core Rule Set)
+The stack ships a switchable edge via Compose **profiles**:
+- `COMPOSE_PROFILES=plain` → the hand-tuned nginx (TLS, rate-limit, WS, LB). Default.
+- `COMPOSE_PROFILES=waf`  → `owasp/modsecurity-crs:nginx` (TLS + **OWASP CRS WAF** + WS
+  proxy to the API). 100% open-source, no license cost.
+
+To enable the WAF: set `COMPOSE_PROFILES=waf` and `DOMAIN=yourdomain` in `.env`, then
+`docker compose up -d`. Start with `MODSEC_RULE_ENGINE=DetectionOnly` (the default),
+watch `docker compose logs -f waf` for rule hits on real traffic, then set
+`MODSEC_RULE_ENGINE=On` once false positives are tuned. (The WAF proxies `/uploads`
+to the API, which serves them.)
+
+## 9. Automated MongoDB backups
+The `mongo-backup` service runs `mongodump` on a schedule into the `mongo-backups`
+volume with retention (defaults: daily, keep 7 days — tune `BACKUP_INTERVAL` /
+`BACKUP_KEEP_DAYS` in `.env`).
+```bash
+docker compose exec mongo-backup ls -lh /backups          # list backups
+# copy off-box (do this on a cron to S3/another host):
+docker run --rm -v taxilik_mongo-backups:/b -v $(pwd):/out alpine \
+  sh -c 'cp /b/$(ls -t /b | head -1) /out/'               # latest archive -> ./
+# restore an archive:
+docker compose exec mongo sh -c 'mongorestore --uri "$MONGO_URI" --gzip --archive=/backups/<file>'
+```
+For off-site durability, sync the volume to object storage (S3/Backblaze) from cron.
+
+## 10. Hardening summary
+- **App** (built in): Helmet headers, CORS allow-list, NoSQL-injection sanitize,
   body-size limits, **Redis-backed rate-limiting** (tight on `/api/auth/*`),
   **15-min access tokens + rotating refresh tokens**, graceful shutdown, structured
   (pino) logs, non-root container, healthcheck.
-- **Backups**: `docker compose exec mongo mongodump` on a cron to off-box storage;
-  snapshot the `uploads` volume.
-- **Firewall**: allow only 22/80/443; Mongo/Redis stay on the internal Docker network
-  (never published).
+- **Edge**: TLS 1.2/1.3, HSTS + security headers, per-IP rate limits, optional OWASP WAF.
+- **Network**: Mongo/Redis are never published — internal Docker network only.
+  **Firewall the host**: allow only 22/80/443 (`ufw allow 22,80,443/tcp`).
 
-## 8. After pulling these changes (one-time)
+## 11. After pulling these changes (one-time)
 The backend has new dependencies — install them:
 ```bash
 cd backend && npm install   # @socket.io/redis-adapter, ioredis, helmet,

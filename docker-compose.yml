@@ -47,9 +47,12 @@ services:
     expose:
       - '5000'
 
+  # --- Edge: pick ONE via COMPOSE_PROFILES (plain | waf) in .env ---
+
+  # Plain reverse proxy (TLS, rate-limit, WS, load-balancing). Default.
   nginx:
     image: nginx:alpine
-    # For a built-in WAF, swap the image for: owasp/modsecurity-crs:nginx
+    profiles: ['plain']
     restart: unless-stopped
     ports:
       - '80:80'
@@ -62,7 +65,51 @@ services:
     depends_on:
       - api
 
+  # Free OWASP ModSecurity Core Rule Set WAF (TLS + WAF + WS proxy to the API).
+  # Enable with COMPOSE_PROFILES=waf. Start with MODSEC_RULE_ENGINE=DetectionOnly
+  # to tune out false positives, then switch to On.
+  waf:
+    image: owasp/modsecurity-crs:nginx
+    profiles: ['waf']
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      SERVER_NAME: ${DOMAIN}
+      BACKEND: 'http://api:5000'
+      BACKEND_WS: 'ws://api:5000'        # WebSocket (Socket.IO) upstream
+      PORT: '80'
+      SSL_PORT: '443'
+      NGINX_ALWAYS_TLS_REDIRECT: 'on'
+      MODSEC_RULE_ENGINE: ${MODSEC_RULE_ENGINE:-DetectionOnly}
+      PARANOIA: '1'
+      MODSEC_REQ_BODY_LIMIT: '13107200'  # ~12.5MB (allow 8MB uploads)
+      PROXY_TIMEOUT: '3600s'             # keep WebSockets alive
+      SSL_CERT: /etc/letsencrypt/live/${DOMAIN}/fullchain.pem
+      SSL_CERT_KEY: /etc/letsencrypt/live/${DOMAIN}/privkey.pem
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt:ro
+    depends_on:
+      - api
+
+  # Automated MongoDB backups (mongodump → gzip archive, with retention).
+  mongo-backup:
+    image: mongo:7
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      MONGO_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo:27017/taxilik?authSource=admin
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-86400}   # seconds (default daily)
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-7}
+    entrypoint: ['/bin/sh', '/mongo-backup.sh']
+    volumes:
+      - ./scripts/mongo-backup.sh:/mongo-backup.sh:ro
+      - mongo-backups:/backups
+
 volumes:
   mongo-data:
   redis-data:
   uploads:
+  mongo-backups:
