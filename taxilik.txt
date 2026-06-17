@@ -1,0 +1,137 @@
+Cahier des Charges Fonctionnel et Technique
+
+    Projet : TaxiLik.ma (Application Légale de Réservation de Taxis)
+
+                                  Ayman Chabbaki
+                               Tech Hermanos Agency
+
+                                      15 juin 2026
+
+Table des matières
+
+1 Introduction et Objectifs du Projet                                 2
+
+2 Description Fonctionnelle du Système (MVP)                          2
+
+2.1 Application Passager (React Native) . . . . . . . . . . . . . . . . . . . . . 2
+
+2.2 Application Chauffeur (React Native) . . . . . . . . . . . . . . . . . . . . . 2
+
+2.3 Panneau d'Administration (Node.js/Express) . . . . . . . . . . . . . . . . . 2
+
+3 Architecture Technique                                              3
+
+4 Estimation des Charges et Budget Technique                          3
+
+4.1 Budget de Lancement (MVP) . . . . . . . . . . . . . . . . . . . . . . . . . 3
+
+4.2 Évolutions Prévues (Post-MVP) . . . . . . . . . . . . . . . . . . . . . . . . 3
+
+                          1
+1 Introduction et Objectifs du Projet
+
+    Le projet TaxiLik.ma consiste à développer une plateforme légale de mise en relation
+entre chauffeurs de petits taxis et passagers au Maroc. Contrairement aux applications de
+VTC basées sur la négociation, TaxiLik.ma respecte scrupuleusement la réglementation
+tarifaire locale.
+
+    L'objectif est de digitaliser l'accès aux taxis tout en garantissant une transparence
+totale sur le prix, calculé sur la base du compteur officiel et de la distance parcourue.
+Le produit initial (MVP) se concentrera sur les fonctionnalités de base essentielles pour
+valider le concept sur le marché.
+
+2 Description Fonctionnelle du Système (MVP)
+
+    L'écosystème se compose de trois modules principaux : l'application Passager, l'appli-
+cation Chauffeur, et le Panneau d'Administration Web.
+
+2.1 Application Passager (React Native)
+
+    -- Authentification (MVP) : Inscription et connexion via adresse e-mail avec vé-
+        rification par code OTP envoyé via SMTP.
+
+    -- Demande de Course : Saisie du point de départ et de destination via une carte
+        interactive.
+
+    -- Estimation Légale du Tarif : Calcul automatique du prix estimé basé sur la
+        tarification réglementaire marocaine :
+        -- Tarif kilométrique : 0.50 DH par kilomètre.
+        -- Prise en charge (Jour) : + 2,00 DH.
+        -- Prise en charge (Nuit) : + 4,00 DH.
+
+    -- Mise en Relation : Envoi de la demande aux chauffeurs dans le périmètre et
+        affichage du chauffeur assigné.
+
+    -- Suivi de Course : Suivi en temps réel du chauffeur sur la carte avant son arrivée.
+
+2.2 Application Chauffeur (React Native)
+
+    -- Inscription Légale : Soumission des documents légaux (Carte d'identité, permis
+        de conduire, carte grise, assurance, permis de confiance) pour validation adminis-
+        trative.
+
+    -- Gestion du Statut : Bascule En Ligne / Hors Ligne pour recevoir des courses.
+    -- Réception des Courses : Affichage des demandes avec le point de départ, la
+
+        destination et le prix estimé. Le chauffeur peut accepter ou ignorer la demande
+        (pas de négociation de prix).
+    -- Navigation : Guidage GPS intégré vers le client puis vers la destination.
+
+2.3 Panneau d'Administration (Node.js/Express)
+
+    -- Validation rigoureuse des documents des chauffeurs pour assurer la conformité
+        légale.
+
+    -- Gestion des utilisateurs (passagers et chauffeurs).
+    -- Suivi des statistiques basiques et gestion des litiges.
+
+                                                        2
+3 Architecture Technique
+
+    -- Frontend (Mobile) : React Native pour garantir une compatibilité iOS et An-
+        droid avec une seule base de code.
+
+    -- Backend (API) : Node.js avec le framework Express.js.
+    -- Temps Réel : Socket.io (WebSockets) pour la géolocalisation des chauffeurs et
+
+        l'attribution instantanée des courses.
+    -- Base de Données : MongoDB pour la gestion efficace des requêtes géospatiales.
+    -- Mailing : Utilisation d'un serveur SMTP (ex : Nodemailer) pour l'envoi des codes
+
+        OTP d'authentification.
+
+4 Estimation des Charges et Budget Technique
+
+4.1 Budget de Lancement (MVP)
+
+    Le tableau suivant résume les coûts d'infrastructure nécessaires pour le lancement du
+MVP. L'optimisation des coûts a été privilégiée en remplaçant les SMS par des e-mails
+pour l'OTP.
+
+Poste de Dépense            Service                Fréquence         Montant (DH)
+
+Nom de Domaine (.ma)        Registar Local         Annuel            120,00 DH
+Hébergement VPS             Hostinger              Mensuel           140,00 DH
+Service Email (SMTP OTP)    SendGrid / Nodemailer  Jusqu'à 100/jour
+API Géolocalisation         Mapbox / Google Maps   Tier Gratuit         0,00 DH
+                                                                        0,00 DH
+
+Total Initial Estimé (MVP)                                           260,00 DH
+
+4.2 Évolutions Prévues (Post-MVP)
+
+    Une fois le modèle validé sur le marché, des investissements supplémentaires seront dé-
+bloqués pour la mise en production officielle sur les stores et l'amélioration de l'expérience
+utilisateur.
+
+    -- Publication Google Play Store : Frais d'inscription développeur uniques de
+        250,00 DH (25$).
+
+    -- Publication Apple App Store : Frais d'abonnement développeur annuels de
+        1 000,00 DH (99$).
+
+    -- Authentification SMS : Transition du système OTP par e-mail vers des SMS
+        pour plus de fluidité.
+
+                                     3
+

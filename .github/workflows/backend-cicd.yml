@@ -1,0 +1,93 @@
+name: backend-cicd
+
+# Build, scan, and deploy the TaxiLik API to Azure Container Apps.
+# Auth uses GitHub OIDC federation — no stored cloud credentials.
+#   Required GitHub secrets:  AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
+#   Required GitHub vars:     ACR_NAME, RESOURCE_GROUP, CONTAINERAPP_NAME
+
+on:
+  push:
+    branches: [main]
+    paths: ['backend/**', '.github/workflows/backend-cicd.yml']
+  pull_request:
+    paths: ['backend/**']
+
+permissions:
+  id-token: write   # OIDC
+  contents: read
+
+env:
+  IMAGE_NAME: taxilik-api
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      mongo:
+        image: mongo:7
+        ports: ['27017:27017']
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Sanity load (all modules require cleanly)
+        env:
+          MONGO_URI: mongodb://127.0.0.1:27017/taxilik_ci
+          JWT_SECRET: ci-secret
+        run: node -e "require('./src/app'); require('./src/sockets'); console.log('modules OK')"
+      - name: Dependency audit (high+)
+        run: npm audit --audit-level=high || true
+      - name: Build image
+        run: docker build -t $IMAGE_NAME:${{ github.sha }} .
+      - name: Trivy image scan (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+
+  deploy:
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production   # add required reviewers in repo settings for approval gate
+    steps:
+      - uses: actions/checkout@v4
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Build & push image in ACR
+        run: |
+          az acr build \
+            --registry ${{ vars.ACR_NAME }} \
+            --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --image ${{ env.IMAGE_NAME }}:latest \
+            ./backend
+      - name: Deploy new revision to Container Apps
+        run: |
+          az containerapp update \
+            --name ${{ vars.CONTAINERAPP_NAME }} \
+            --resource-group ${{ vars.RESOURCE_GROUP }} \
+            --image ${{ vars.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      - name: Smoke test /health
+        run: |
+          FQDN=$(az containerapp show -n ${{ vars.CONTAINERAPP_NAME }} -g ${{ vars.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
+          for i in $(seq 1 10); do
+            if curl -fsS "https://$FQDN/health"; then echo "healthy"; exit 0; fi
+            sleep 6
+          done
+          echo "health check failed"; exit 1
