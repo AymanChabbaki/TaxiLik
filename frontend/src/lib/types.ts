@@ -26,6 +26,8 @@ export interface User {
   emailVerified: boolean;
   isBlocked: boolean;
   driver?: DriverProfile;
+  rating?: number;
+  ratingCount?: number;
   createdAt: string;
 }
 
@@ -53,6 +55,12 @@ export interface Place {
   location: { type: 'Point'; coordinates: [number, number] };
 }
 
+export interface RideRating {
+  stars: number;
+  comment?: string;
+  ratedAt: string;
+}
+
 export interface Ride {
   _id: string;
   passenger: string;
@@ -62,6 +70,8 @@ export interface Ride {
   fare: Fare;
   passengers?: number;
   status: RideStatus;
+  passengerRating?: RideRating;
+  driverRating?: RideRating;
   createdAt: string;
 }
 

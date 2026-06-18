@@ -20,7 +20,10 @@ const register = asyncHandler(async (req, res) => {
   const phone = req.body.phone ? String(req.body.phone).trim() : undefined;
 
   if (!EMAIL_RE.test(email)) throw ApiError.badRequest('A valid email is required');
-  if (password.length < 6) throw ApiError.badRequest('Password must be at least 6 characters');
+  if (password.length < 8) throw ApiError.badRequest('Password must be at least 8 characters');
+  if (password.length > 128) throw ApiError.badRequest('Password is too long');
+  if (fullName && fullName.length > 100) throw ApiError.badRequest('Full name is too long');
+  if (phone && phone.length > 20) throw ApiError.badRequest('Phone number is too long');
 
   const existing = await User.findOne({ email });
   if (existing && existing.emailVerified) {
@@ -138,8 +141,16 @@ const me = asyncHandler(async (req, res) => {
 // PATCH /api/auth/me  { fullName, phone }
 const updateMe = asyncHandler(async (req, res) => {
   const { fullName, phone } = req.body;
-  if (fullName !== undefined) req.user.fullName = String(fullName).trim();
-  if (phone !== undefined) req.user.phone = String(phone).trim();
+  if (fullName !== undefined) {
+    const name = String(fullName).trim();
+    if (name.length > 100) throw ApiError.badRequest('Full name is too long');
+    req.user.fullName = name;
+  }
+  if (phone !== undefined) {
+    const p = String(phone).trim();
+    if (p.length > 20) throw ApiError.badRequest('Phone number is too long');
+    req.user.phone = p;
+  }
   await req.user.save();
   res.json({ user: req.user.toPublic() });
 });
@@ -156,6 +167,17 @@ const deleteMe = asyncHandler(async (req, res) => {
   res.json({ message: 'Account deleted' });
 });
 
+// PATCH /api/auth/push-token  { token }
+// Registers the device's Expo push token so the server can send notifications.
+const registerPushToken = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  if (!token || typeof token !== 'string') throw ApiError.badRequest('token is required');
+  if (!token.startsWith('ExponentPushToken[')) throw ApiError.badRequest('Invalid push token format');
+  req.user.pushToken = token;
+  await req.user.save();
+  res.json({ ok: true });
+});
+
 module.exports = {
   register,
   verifyEmail,
@@ -167,4 +189,5 @@ module.exports = {
   me,
   updateMe,
   deleteMe,
+  registerPushToken,
 };

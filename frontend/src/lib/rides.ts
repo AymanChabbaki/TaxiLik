@@ -51,6 +51,14 @@ export function getRideHistory(token: string) {
   return apiRequest<{ rides: Ride[] }>('/api/rides', { token });
 }
 
+export function rateRide(token: string, rideId: string, stars: number, comment?: string) {
+  return apiRequest<{ ok: boolean }>(`/api/rides/${rideId}/rate`, {
+    method: 'POST',
+    token,
+    body: { stars, comment },
+  });
+}
+
 export function formatMAD(amount: number) {
   return `${amount.toFixed(2)} MAD`;
 }

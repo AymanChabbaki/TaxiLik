@@ -28,6 +28,9 @@ const env = {
   // Where uploaded driver docs / avatars are stored (mount a volume in prod).
   uploadDir: process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'uploads'),
 
+  // Separate secret for OTP HMAC — rotating JWT_SECRET won't invalidate pending OTPs.
+  otpSecret: required('OTP_SECRET', 'dev-otp-secret-change-me'),
+
   jwt: {
     secret: required('JWT_SECRET', 'dev-insecure-secret-change-me'),
     // Short-lived access token; long-lived rotating refresh token.

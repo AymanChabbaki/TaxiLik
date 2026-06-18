@@ -2,6 +2,15 @@ const mongoose = require('mongoose');
 
 const { Schema } = mongoose;
 
+const ratingSchema = new Schema(
+  {
+    stars: { type: Number, min: 1, max: 5 },
+    comment: { type: String, maxlength: 300 },
+    ratedAt: { type: Date },
+  },
+  { _id: false }
+);
+
 const placeSchema = new Schema(
   {
     address: { type: String, required: true },
@@ -59,6 +68,10 @@ const rideSchema = new Schema(
 
     cancelledBy: { type: String, enum: ['passenger', 'driver', 'system'] },
     cancelReason: { type: String },
+
+    // Ratings: passenger rates the driver, driver rates the passenger.
+    passengerRating: { type: ratingSchema },
+    driverRating: { type: ratingSchema },
 
     acceptedAt: { type: Date },
     arrivedAt: { type: Date },

@@ -4,6 +4,7 @@ const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { broadcastRide } = require('../services/matching.service');
 const { emitToUser, emitToRide } = require('../sockets/io');
+const { sendPushToUser } = require('../services/notifications.service');
 
 const DOC_TYPES = ['cin', 'permis', 'carte_grise', 'assurance', 'permis_confiance'];
 
@@ -20,6 +21,14 @@ const submitDocument = asyncHandler(async (req, res) => {
   const { type, url } = req.body;
   if (!DOC_TYPES.includes(type)) throw ApiError.badRequest('Invalid document type');
   if (!url) throw ApiError.badRequest('Document url is required');
+
+  // Only accept paths that point to files uploaded to this server.
+  // Reject external URLs, data: URIs, or path traversal attempts.
+  const urlStr = String(url);
+  const isLocalUpload =
+    /^\/uploads\/[a-zA-Z0-9_\-]+\.(jpg|jpeg|png|webp|pdf)$/i.test(urlStr) ||
+    /^https?:\/\/[^/]+\/uploads\/[a-zA-Z0-9_\-]+\.(jpg|jpeg|png|webp|pdf)$/i.test(urlStr);
+  if (!isLocalUpload) throw ApiError.badRequest('Invalid document URL');
 
   const driver = req.user;
   const existing = driver.driver.documents.find((d) => d.type === type);
@@ -46,6 +55,8 @@ const submitDocument = asyncHandler(async (req, res) => {
 // PUT /api/driver/vehicle  { plate, licenseNumber }
 const updateVehicle = asyncHandler(async (req, res) => {
   const { plate, licenseNumber } = req.body;
+  if (plate && String(plate).trim().length > 20) throw ApiError.badRequest('Plate number is too long');
+  if (licenseNumber && String(licenseNumber).trim().length > 50) throw ApiError.badRequest('License number is too long');
   req.user.driver.vehicle = {
     plate: plate?.trim(),
     licenseNumber: licenseNumber?.trim(),
@@ -113,6 +124,7 @@ const acceptRide = asyncHandler(async (req, res) => {
       location: driver.driver.lastLocation,
     },
   });
+  sendPushToUser(ride.passenger, 'Chauffeur en route', `${driver.fullName || 'Votre chauffeur'} arrive vers vous.`, { screen: 'booking' });
 
   // Return the ride with passenger contact so the driver can call/message them.
   await ride.populate('passenger', 'fullName phone avatarUrl');
@@ -158,6 +170,13 @@ const advanceRide = asyncHandler(async (req, res) => {
 
   emitToUser(ride.passenger, 'ride:updated', { ride });
   emitToRide(ride._id, 'ride:status', { rideId: String(ride._id), status: ride.status });
+
+  if (ride.status === 'arrived') {
+    sendPushToUser(ride.passenger, 'Chauffeur arrivé', 'Votre taxi est devant vous.', { screen: 'booking' });
+  } else if (ride.status === 'completed') {
+    sendPushToUser(ride.passenger, 'Course terminée', 'Merci d\'utiliser TaxiLik.ma ! Notez votre chauffeur.', { screen: 'booking' });
+  }
+
   res.json({ ride });
 });
 

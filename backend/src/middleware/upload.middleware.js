@@ -11,16 +11,24 @@ const env = require('../config/env');
 const UPLOAD_DIR = env.uploadDir;
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
+// Map validated MIME types to safe extensions — never trust the client filename.
+const MIME_TO_EXT = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'application/pdf': '.pdf',
+};
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg';
+    const ext = MIME_TO_EXT[file.mimetype] || '.bin';
     const name = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`;
     cb(null, name);
   },
 });
 
-const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+const ALLOWED = Object.keys(MIME_TO_EXT);
 
 const upload = multer({
   storage,

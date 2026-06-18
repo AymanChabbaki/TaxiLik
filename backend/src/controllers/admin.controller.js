@@ -3,6 +3,7 @@ const Ride = require('../models/Ride');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { emitToUser } = require('../sockets/io');
+const { sendPushToUser } = require('../services/notifications.service');
 
 // GET /api/admin/drivers?status=pending
 const listDrivers = asyncHandler(async (req, res) => {
@@ -32,6 +33,9 @@ const reviewDocument = asyncHandler(async (req, res) => {
   const { status, rejectionReason } = req.body;
   if (!['approved', 'rejected'].includes(status)) {
     throw ApiError.badRequest('status must be approved or rejected');
+  }
+  if (rejectionReason && String(rejectionReason).length > 500) {
+    throw ApiError.badRequest('Rejection reason is too long');
   }
 
   const driver = await User.findOne({ _id: req.params.id, role: 'driver' });
@@ -73,6 +77,11 @@ const setApproval = asyncHandler(async (req, res) => {
   await driver.save();
 
   emitToUser(driver._id, 'driver:approval', { status, reason });
+  if (status === 'approved') {
+    sendPushToUser(driver._id, 'Compte approuvé ✓', 'Félicitations ! Votre compte chauffeur est activé. Vous pouvez commencer à accepter des courses.', { screen: 'home' });
+  } else if (status === 'rejected') {
+    sendPushToUser(driver._id, 'Dossier refusé', reason || 'Votre dossier nécessite des corrections. Vérifiez vos documents.', { screen: 'onboarding' });
+  }
   res.json({ driver: driver.toPublic() });
 });
 

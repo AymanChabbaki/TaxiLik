@@ -6,6 +6,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const { estimateFare } = require('../services/fare.service');
 const { broadcastRide } = require('../services/matching.service');
 const { emitToUser, emitToRide } = require('../sockets/io');
+const { sendPushToUser } = require('../services/notifications.service');
 
 const ACTIVE_STATUSES = ['requested', 'accepted', 'arrived', 'started'];
 
@@ -144,10 +145,65 @@ const cancelRide = asyncHandler(async (req, res) => {
   ride.cancelReason = req.body.reason;
   await ride.save();
 
-  if (ride.driver) emitToUser(ride.driver, 'ride:cancelled', { rideId: String(ride._id) });
+  if (ride.driver) {
+    emitToUser(ride.driver, 'ride:cancelled', { rideId: String(ride._id) });
+    sendPushToUser(ride.driver, 'Course annulée', 'Le passager a annulé la course.', { screen: 'home' });
+  }
   emitToRide(ride._id, 'ride:updated', { ride });
   res.json({ ride });
 });
+
+// POST /api/rides/:id/rate  { stars: 1-5, comment? }
+// Passenger rates the driver; driver rates the passenger.
+const rateRide = asyncHandler(async (req, res) => {
+  const ride = await Ride.findById(req.params.id);
+  if (!ride) throw ApiError.notFound('Ride not found');
+  if (ride.status !== 'completed') throw ApiError.badRequest('Can only rate completed rides');
+
+  const stars = parseInt(req.body.stars, 10);
+  if (!stars || stars < 1 || stars > 5) throw ApiError.badRequest('stars must be 1-5');
+  const comment = req.body.comment ? String(req.body.comment).slice(0, 300) : undefined;
+
+  const isPassenger = String(ride.passenger) === String(req.user._id);
+  const isDriver = ride.driver && String(ride.driver) === String(req.user._id);
+  if (!isPassenger && !isDriver) throw ApiError.forbidden();
+
+  if (isPassenger) {
+    if (ride.passengerRating?.stars) throw ApiError.conflict('Already rated');
+    ride.passengerRating = { stars, comment, ratedAt: new Date() };
+    await ride.save();
+    if (ride.driver) await _updateUserRating(ride.driver);
+  } else {
+    if (ride.driverRating?.stars) throw ApiError.conflict('Already rated');
+    ride.driverRating = { stars, comment, ratedAt: new Date() };
+    await ride.save();
+    await _updateUserRating(ride.passenger);
+  }
+
+  res.json({ ok: true });
+});
+
+async function _updateUserRating(userId) {
+  const [asDriver, asPassenger] = await Promise.all([
+    Ride.aggregate([
+      { $match: { driver: userId, 'passengerRating.stars': { $exists: true } } },
+      { $group: { _id: null, avg: { $avg: '$passengerRating.stars' }, count: { $sum: 1 } } },
+    ]),
+    Ride.aggregate([
+      { $match: { passenger: userId, 'driverRating.stars': { $exists: true } } },
+      { $group: { _id: null, avg: { $avg: '$driverRating.stars' }, count: { $sum: 1 } } },
+    ]),
+  ]);
+  const dCount = asDriver[0]?.count || 0;
+  const pCount = asPassenger[0]?.count || 0;
+  const total = dCount + pCount;
+  if (total === 0) return;
+  const avg = ((asDriver[0]?.avg || 0) * dCount + (asPassenger[0]?.avg || 0) * pCount) / total;
+  await User.findByIdAndUpdate(userId, {
+    rating: Math.round(avg * 10) / 10,
+    ratingCount: total,
+  });
+}
 
 module.exports = {
   estimate,
@@ -156,6 +212,7 @@ module.exports = {
   myRides,
   getRide,
   cancelRide,
+  rateRide,
   nearbyDrivers,
   ACTIVE_STATUSES,
 };

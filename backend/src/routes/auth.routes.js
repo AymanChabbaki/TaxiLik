@@ -12,6 +12,7 @@ const {
   me,
   updateMe,
   deleteMe,
+  registerPushToken,
 } = require('../controllers/auth.controller');
 
 const router = Router();
@@ -27,5 +28,6 @@ router.get('/me', authenticate, me);
 router.patch('/me', authenticate, updateMe);
 router.delete('/me', authenticate, deleteMe);
 router.post('/avatar', authenticate, upload.single('file'), uploadAvatar);
+router.patch('/push-token', authenticate, registerPushToken);
 
 module.exports = router;

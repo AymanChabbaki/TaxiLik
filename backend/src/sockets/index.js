@@ -55,7 +55,14 @@ async function dropViewerEverywhere(driverId) {
 }
 
 function initSockets(httpServer) {
-  const io = new Server(httpServer, { cors: { origin: '*' } });
+  const { corsOrigins, isProd } = require('../config/env');
+  const io = new Server(httpServer, {
+    cors: corsOrigins.length
+      ? { origin: corsOrigins, credentials: true }
+      : isProd
+        ? { origin: false }          // no origins allowed if misconfigured in prod
+        : { origin: '*' },           // permissive only in dev
+  });
   setIO(io);
 
   // Horizontal scaling: fan out events across replicas via Redis pub/sub.
@@ -87,8 +94,17 @@ function initSockets(httpServer) {
   io.on('connection', (socket) => {
     socket.join(`user:${socket.userId}`);
 
-    socket.on('ride:join', (rideId) => {
-      if (rideId) socket.join(`ride:${rideId}`);
+    socket.on('ride:join', async (rideId) => {
+      if (!rideId) return;
+      // Only allow joining a ride room if the user is actually a participant.
+      const Ride = require('../models/Ride');
+      const ride = await Ride.findById(rideId).select('passenger driver').lean().catch(() => null);
+      if (!ride) return;
+      const isParticipant =
+        String(ride.passenger) === socket.userId ||
+        (ride.driver && String(ride.driver) === socket.userId);
+      if (!isParticipant) return;
+      socket.join(`ride:${rideId}`);
     });
     socket.on('ride:leave', (rideId) => {
       if (rideId) socket.leave(`ride:${rideId}`);

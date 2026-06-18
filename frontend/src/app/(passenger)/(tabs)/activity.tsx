@@ -25,6 +25,7 @@ export default function ActivityScreen() {
     cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.sm },
     from: { ...Type.labelSm, color: c.textSecondary, flex: 1 },
     badge: { ...Type.labelSm, fontWeight: '700' },
+    starsRow: { flexDirection: 'row', gap: 2 },
     empty: { alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.xxl },
     emptyIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
     emptyText: { ...Type.bodyMd, color: c.textMuted },
@@ -69,7 +70,21 @@ export default function ActivityScreen() {
               </View>
               <View style={s.cardBottom}>
                 <Text style={s.from} numberOfLines={1}>{t('activity.from', { address: item.pickup.address })}</Text>
-                <Text style={[s.badge, { color: badgeColor(item.status) }]}>{t(`rstatus.${item.status}` as any)}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {item.passengerRating?.stars ? (
+                    <View style={s.starsRow}>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <Ionicons
+                          key={n}
+                          name={n <= item.passengerRating!.stars ? 'star' : 'star-outline'}
+                          size={12}
+                          color={colors.warning}
+                        />
+                      ))}
+                    </View>
+                  ) : null}
+                  <Text style={[s.badge, { color: badgeColor(item.status) }]}>{t(`rstatus.${item.status}` as any)}</Text>
+                </View>
               </View>
             </View>
           )}

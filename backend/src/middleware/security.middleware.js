@@ -21,9 +21,22 @@ function strip(obj) {
     }
   }
 }
+// Express 5 makes req.query read-only, so we rebuild a sanitised plain object
+// and shadow it via Object.defineProperty instead of mutating in place.
+function sanitizeQuery(req) {
+  try {
+    const clean = JSON.parse(JSON.stringify(req.query)); // plain object copy
+    strip(clean);
+    Object.defineProperty(req, 'query', { value: clean, writable: true, configurable: true });
+  } catch {
+    // If query can't be cloned just leave it; strip(req.query) would throw anyway.
+  }
+}
+
 function sanitize(req, _res, next) {
   strip(req.body);
   strip(req.params);
+  sanitizeQuery(req);
   next();
 }
 

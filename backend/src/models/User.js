@@ -73,6 +73,13 @@ const userSchema = new Schema(
 
     // Soft account controls for admin.
     isBlocked: { type: Boolean, default: false },
+
+    // Aggregated average rating (updated after each new rating).
+    rating: { type: Number, default: 0, min: 0, max: 5 },
+    ratingCount: { type: Number, default: 0 },
+
+    // Expo push token for device notifications (updated on each app launch).
+    pushToken: { type: String },
   },
   { timestamps: true }
 );
@@ -99,6 +106,8 @@ userSchema.methods.toPublic = function toPublic() {
             documents: this.driver?.documents,
           }
         : undefined,
+    rating: this.rating,
+    ratingCount: this.ratingCount,
     createdAt: this.createdAt,
   };
 };

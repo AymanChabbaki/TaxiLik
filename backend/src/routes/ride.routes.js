@@ -18,5 +18,6 @@ router.get('/active', requireRole('passenger'), c.activeRide);
 router.get('/', requireRole('passenger'), c.myRides);
 router.get('/:id', c.getRide);
 router.post('/:id/cancel', requireRole('passenger'), c.cancelRide);
+router.post('/:id/rate', c.rateRide);
 
 module.exports = router;

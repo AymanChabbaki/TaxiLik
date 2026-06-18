@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { LiveMap } from '@/components/LiveMap';
 import { Wordmark } from '@/components/Logo';
+import { RatingModal } from '@/components/RatingModal';
 import { RideChat } from '@/components/RideChat';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -54,6 +55,7 @@ export default function BookingScreen() {
   const [viewers, setViewers] = useState(0);
   const [chatOpen, setChatOpen] = useState(false);
   const [picking, setPicking] = useState<'pickup' | 'destination' | null>(null);
+  const [completedRide, setCompletedRide] = useState<Ride | null>(null);
 
   // Fetch GPS and set it as the pickup ("Position actuelle").
   const locateMe = useCallback(async () => {
@@ -180,13 +182,17 @@ export default function BookingScreen() {
   }, [token, activeRide, pickup.coords]);
 
   useEffect(() => {
-    if (activeRide && ['completed', 'cancelled', 'expired'].includes(activeRide.status)) {
-      const t = setTimeout(() => {
+    if (!activeRide) return;
+    if (activeRide.status === 'completed' && !activeRide.passengerRating?.stars) {
+      // Show rating prompt immediately; clear ride when the user rates or skips.
+      setCompletedRide(activeRide);
+    } else if (['completed', 'cancelled', 'expired'].includes(activeRide.status)) {
+      const id = setTimeout(() => {
         setActiveRide(null);
         setAssignedDriver(null);
         setDriverPos(null);
-      }, 4000);
-      return () => clearTimeout(t);
+      }, 3000);
+      return () => clearTimeout(id);
     }
   }, [activeRide?.status]);
 
@@ -231,6 +237,13 @@ export default function BookingScreen() {
       setRequesting(false);
     }
   }, [token, destination, pickup, passengers]);
+
+  const onRatingDone = useCallback(() => {
+    setCompletedRide(null);
+    setActiveRide(null);
+    setAssignedDriver(null);
+    setDriverPos(null);
+  }, []);
 
   const onCancel = useCallback(async () => {
     if (!token || !activeRide) return;
@@ -383,6 +396,10 @@ export default function BookingScreen() {
           onClose={() => setChatOpen(false)}
           title={t('chat.withDriver')}
         />
+      ) : null}
+
+      {completedRide && token ? (
+        <RatingModal ride={completedRide} token={token} onDone={onRatingDone} />
       ) : null}
     </View>
   );

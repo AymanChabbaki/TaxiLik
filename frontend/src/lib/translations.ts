@@ -393,6 +393,13 @@ const fr = {
   'admin.doc.carte_grise': 'Carte Grise',
   'admin.doc.assurance': 'Assurance',
   'admin.doc.permis_confiance': 'Permis de Confiance',
+
+  // Rating modal
+  'rating.title': 'Évaluez votre course',
+  'rating.driver': 'Comment était le chauffeur ?',
+  'rating.placeholder': 'Un commentaire (facultatif)',
+  'rating.submit': 'Envoyer',
+  'rating.skip': 'Passer',
 };
 
 export type TranslationKey = keyof typeof fr;
@@ -758,6 +765,12 @@ const en: Dict = {
   'admin.doc.carte_grise': 'Vehicle Registration',
   'admin.doc.assurance': 'Insurance',
   'admin.doc.permis_confiance': 'Operating Permit',
+
+  'rating.title': 'Rate your ride',
+  'rating.driver': 'How was your driver?',
+  'rating.placeholder': 'A comment (optional)',
+  'rating.submit': 'Submit',
+  'rating.skip': 'Skip',
 };
 
 const ar: Dict = {
@@ -1120,6 +1133,12 @@ const ar: Dict = {
   'admin.doc.carte_grise': 'بطاقة الرمادية',
   'admin.doc.assurance': 'التأمين',
   'admin.doc.permis_confiance': 'رخصة الثقة',
+
+  'rating.title': 'قيّم رحلتك',
+  'rating.driver': 'كيف كان سائقك؟',
+  'rating.placeholder': 'تعليق (اختياري)',
+  'rating.submit': 'إرسال',
+  'rating.skip': 'تخطّي',
 };
 
 export const translations = { fr, en, ar };

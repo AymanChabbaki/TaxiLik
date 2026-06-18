@@ -10,7 +10,7 @@ function generateCode(length = env.otp.length) {
 }
 
 function hashCode(code) {
-  return crypto.createHmac('sha256', env.jwt.secret).update(code).digest('hex');
+  return crypto.createHmac('sha256', env.otpSecret).update(code).digest('hex');
 }
 
 /**
