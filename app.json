@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "a4f7701d-1c4e-407c-b94a-640bba30c531"
+      }
+    },
+    "android": {
+      "package": "com.aymenexe.taxilik"
+    }
+  }
+}
