@@ -26,6 +26,7 @@ export default function DriverActivity() {
     bottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.sm },
     from: { ...Type.labelSm, color: c.textSecondary, flex: 1 },
     badge: { ...Type.labelSm, fontWeight: '700' },
+    starsRow: { flexDirection: 'row', gap: 2 },
     empty: { alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.xxl },
     emptyIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
     emptyText: { ...Type.bodyMd, color: c.textMuted },
