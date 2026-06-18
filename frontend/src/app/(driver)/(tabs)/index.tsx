@@ -94,7 +94,7 @@ export default function DriverDashboard() {
   }, [token]);
 
   const stopWatching = useCallback(() => {
-    watchRef.current?.remove();
+    try { watchRef.current?.remove(); } catch { /* expo-location web bug */ }
     watchRef.current = null;
   }, []);
 
