@@ -71,7 +71,21 @@ export default function DriverActivity() {
               </View>
               <View style={s.bottom}>
                 <Text style={s.from} numberOfLines={1}>{item.pickup.address}</Text>
-                <Text style={[s.badge, { color: badgeColor(item.status) }]}>{t(`rstatus.${item.status}` as any)}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {item.passengerRating?.stars ? (
+                    <View style={s.starsRow}>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <Ionicons
+                          key={n}
+                          name={n <= item.passengerRating!.stars ? 'star' : 'star-outline'}
+                          size={12}
+                          color={colors.warning}
+                        />
+                      ))}
+                    </View>
+                  ) : null}
+                  <Text style={[s.badge, { color: badgeColor(item.status) }]}>{t(`rstatus.${item.status}` as any)}</Text>
+                </View>
               </View>
             </View>
           )}

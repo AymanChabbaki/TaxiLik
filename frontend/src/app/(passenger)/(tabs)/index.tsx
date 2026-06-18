@@ -531,7 +531,16 @@ function ActiveRideCard({
           )}
           <View style={{ flex: 1 }}>
             <Text style={s.driverName}>{driver.fullName || t('auth.driver')}</Text>
-            <Text style={s.driverMeta}>{plate || t('driver.taxi')}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={s.driverMeta}>{plate || t('driver.taxi')}</Text>
+              {driver.rating > 0 ? (
+                <>
+                  <Text style={s.driverMeta}>·</Text>
+                  <Ionicons name="star" size={12} color={colors.warning} />
+                  <Text style={s.driverMeta}>{Number(driver.rating).toFixed(1)}</Text>
+                </>
+              ) : null}
+            </View>
           </View>
           <Text style={s.farePrice}>{formatMAD(ride.fare.total)}</Text>
         </View>
