@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "scheme": "taxilik",
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "ma.taxilik.app"
@@ -13,7 +13,6 @@
     "android": {
       "package": "ma.taxilik.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
