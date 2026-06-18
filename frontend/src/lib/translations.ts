@@ -31,6 +31,34 @@ const fr = {
   'login.title': 'Se connecter',
   'login.subtitle': 'Connectez-vous avec votre e-mail et votre mot de passe.',
   'login.noAccount': 'Pas encore de compte ?',
+  'login.forgotPassword': 'Mot de passe oublié ?',
+
+  // Auth — forgot password
+  'forgotPw.title': 'Mot de passe oublié',
+  'forgotPw.subtitle': 'Entrez votre adresse e-mail pour recevoir un code de réinitialisation.',
+  'forgotPw.send': 'Envoyer le code',
+  'forgotPw.sent': 'Un code a été envoyé à {email}',
+
+  // Auth — reset password
+  'resetPw.title': 'Nouveau mot de passe',
+  'resetPw.subtitle': 'Entrez le code reçu par e-mail puis choisissez un nouveau mot de passe.',
+  'resetPw.newPw': 'Nouveau mot de passe',
+  'resetPw.confirmPw': 'Confirmer le mot de passe',
+  'resetPw.submit': 'Réinitialiser',
+  'resetPw.success': 'Mot de passe réinitialisé. Connectez-vous.',
+  'resetPw.mismatch': 'Les mots de passe ne correspondent pas.',
+  'resetPw.tooShort': 'Au moins 8 caractères.',
+
+  // Auth — change password
+  'changePw.title': 'Changer le mot de passe',
+  'changePw.current': 'Mot de passe actuel',
+  'changePw.new': 'Nouveau mot de passe',
+  'changePw.confirm': 'Confirmer le nouveau mot de passe',
+  'changePw.submit': 'Mettre à jour',
+  'changePw.success': 'Mot de passe mis à jour.',
+  'changePw.mismatch': 'Les mots de passe ne correspondent pas.',
+  'changePw.tooShort': 'Au moins 8 caractères.',
+  'changePw.wrongCurrent': 'Mot de passe actuel incorrect.',
 
   // Auth — register
   'register.title': 'Créer un compte',
@@ -434,6 +462,31 @@ const en: Dict = {
   'login.title': 'Sign in',
   'login.subtitle': 'Sign in with your email and password.',
   'login.noAccount': 'No account yet?',
+  'login.forgotPassword': 'Forgot password?',
+
+  'forgotPw.title': 'Forgot password',
+  'forgotPw.subtitle': 'Enter your email address to receive a reset code.',
+  'forgotPw.send': 'Send code',
+  'forgotPw.sent': 'A code was sent to {email}',
+
+  'resetPw.title': 'New password',
+  'resetPw.subtitle': 'Enter the code you received by email then choose a new password.',
+  'resetPw.newPw': 'New password',
+  'resetPw.confirmPw': 'Confirm password',
+  'resetPw.submit': 'Reset password',
+  'resetPw.success': 'Password reset. Please sign in.',
+  'resetPw.mismatch': 'Passwords do not match.',
+  'resetPw.tooShort': 'At least 8 characters.',
+
+  'changePw.title': 'Change password',
+  'changePw.current': 'Current password',
+  'changePw.new': 'New password',
+  'changePw.confirm': 'Confirm new password',
+  'changePw.submit': 'Update password',
+  'changePw.success': 'Password updated.',
+  'changePw.mismatch': 'Passwords do not match.',
+  'changePw.tooShort': 'At least 8 characters.',
+  'changePw.wrongCurrent': 'Current password is incorrect.',
 
   'register.title': 'Create an account',
   'register.subtitle': 'Pick your profile and receive a verification code by email.',
@@ -805,6 +858,31 @@ const ar: Dict = {
   'login.title': 'تسجيل الدخول',
   'login.subtitle': 'سجّل الدخول ببريدك الإلكتروني وكلمة المرور.',
   'login.noAccount': 'ليس لديك حساب؟',
+  'login.forgotPassword': 'نسيت كلمة المرور؟',
+
+  'forgotPw.title': 'نسيت كلمة المرور',
+  'forgotPw.subtitle': 'أدخل بريدك الإلكتروني لتلقّي رمز إعادة التعيين.',
+  'forgotPw.send': 'إرسال الرمز',
+  'forgotPw.sent': 'تم إرسال رمز إلى {email}',
+
+  'resetPw.title': 'كلمة مرور جديدة',
+  'resetPw.subtitle': 'أدخل الرمز المستلم ثم اختر كلمة مرور جديدة.',
+  'resetPw.newPw': 'كلمة المرور الجديدة',
+  'resetPw.confirmPw': 'تأكيد كلمة المرور',
+  'resetPw.submit': 'إعادة التعيين',
+  'resetPw.success': 'تمت إعادة التعيين. يرجى تسجيل الدخول.',
+  'resetPw.mismatch': 'كلمتا المرور غير متطابقتين.',
+  'resetPw.tooShort': '8 أحرف على الأقل.',
+
+  'changePw.title': 'تغيير كلمة المرور',
+  'changePw.current': 'كلمة المرور الحالية',
+  'changePw.new': 'كلمة المرور الجديدة',
+  'changePw.confirm': 'تأكيد كلمة المرور الجديدة',
+  'changePw.submit': 'تحديث كلمة المرور',
+  'changePw.success': 'تم تحديث كلمة المرور.',
+  'changePw.mismatch': 'كلمتا المرور غير متطابقتين.',
+  'changePw.tooShort': '8 أحرف على الأقل.',
+  'changePw.wrongCurrent': 'كلمة المرور الحالية غير صحيحة.',
 
   'register.title': 'إنشاء حساب',
   'register.subtitle': 'اختر ملفك واستلم رمز التحقق عبر البريد الإلكتروني.',

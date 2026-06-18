@@ -95,6 +95,9 @@ export default function LoginScreen() {
         leading={<Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />}
       />
       <Button label={t('welcome.login')} onPress={onSubmit} loading={loading} />
+      <Pressable onPress={() => router.push('/(auth)/forgot-password')} style={styles.link}>
+        <Text style={[styles.linkText, { color: colors.primary }]}>{t('login.forgotPassword')}</Text>
+      </Pressable>
     </AuthScaffold>
   );
 }

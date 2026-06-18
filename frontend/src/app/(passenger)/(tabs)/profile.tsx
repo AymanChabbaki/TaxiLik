@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AvatarPicker } from '@/components/AvatarPicker';
 import { Button } from '@/components/Button';
+import { ChangePasswordModal } from '@/components/ChangePasswordModal';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/lib/auth';
 import { useI18n } from '@/lib/i18n';
@@ -23,6 +24,7 @@ export default function ProfileScreen() {
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [changePwOpen, setChangePwOpen] = useState(false);
 
   async function onSave() {
     setSaving(true);
@@ -62,12 +64,20 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        <Pressable style={s.menuLink} onPress={() => setChangePwOpen(true)}>
+          <Ionicons name="lock-closed-outline" size={20} color={colors.text} />
+          <Text style={s.menuLinkText}>{t('changePw.title')}</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </Pressable>
+
         <Pressable style={s.menuLink} onPress={() => router.push('/(passenger)/menu')}>
           <Ionicons name="menu" size={20} color={colors.text} />
           <Text style={s.menuLinkText}>{t('menu.title')}</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </Pressable>
       </ScrollView>
+
+      <ChangePasswordModal visible={changePwOpen} onClose={() => setChangePwOpen(false)} />
     </SafeAreaView>
   );
 }

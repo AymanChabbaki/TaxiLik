@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AvatarPicker } from '@/components/AvatarPicker';
 import { Button } from '@/components/Button';
+import { ChangePasswordModal } from '@/components/ChangePasswordModal';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { useAuth } from '@/lib/auth';
@@ -18,6 +20,7 @@ export default function DriverProfile() {
   const { colors } = useTheme();
   const { t } = useI18n();
   const s = useStyles();
+  const [changePwOpen, setChangePwOpen] = useState(false);
 
   async function onSignOut() {
     if (token) {
@@ -102,8 +105,19 @@ export default function DriverProfile() {
           <LanguageToggle />
         </View>
 
+        <View style={s.section}>
+          <Pressable style={s.group} onPress={() => setChangePwOpen(true)}>
+            <View style={s.rowItem}>
+              <Text style={s.rowKey}>{t('changePw.title')}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </View>
+          </Pressable>
+        </View>
+
         <Button label={t('settings.logout')} variant="outline" onPress={onSignOut} />
       </ScrollView>
+
+      <ChangePasswordModal visible={changePwOpen} onClose={() => setChangePwOpen(false)} />
     </SafeAreaView>
   );
 }

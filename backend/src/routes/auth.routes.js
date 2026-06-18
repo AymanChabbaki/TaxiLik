@@ -8,6 +8,9 @@ const {
   refresh,
   logout,
   resendOtp,
+  forgotPassword,
+  resetPassword,
+  changePassword,
   uploadAvatar,
   me,
   updateMe,
@@ -23,9 +26,12 @@ router.post('/login', login);
 router.post('/refresh', refresh);
 router.post('/logout', logout);
 router.post('/resend-otp', resendOtp);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
 router.get('/me', authenticate, me);
 router.patch('/me', authenticate, updateMe);
+router.patch('/me/password', authenticate, changePassword);
 router.delete('/me', authenticate, deleteMe);
 router.post('/avatar', authenticate, upload.single('file'), uploadAvatar);
 router.patch('/push-token', authenticate, registerPushToken);

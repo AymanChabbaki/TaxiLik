@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const Otp = require('../models/Otp');
 const env = require('../config/env');
-const { sendMail, otpEmailTemplate } = require('./mailer.service');
+const { sendMail, otpEmailTemplate, resetPasswordEmailTemplate } = require('./mailer.service');
 
 function generateCode(length = env.otp.length) {
   const max = 10 ** length;
@@ -56,4 +56,14 @@ async function verifyOtp(email, code) {
   return { ok: true, role: otp.role };
 }
 
-module.exports = { requestOtp, verifyOtp };
+async function requestPasswordResetOtp(email, role = 'passenger') {
+  await Otp.deleteMany({ email, consumedAt: null });
+  const code = generateCode();
+  const expiresAt = new Date(Date.now() + env.otp.ttlMinutes * 60 * 1000);
+  await Otp.create({ email, codeHash: hashCode(code), role, expiresAt });
+  const { text, html } = resetPasswordEmailTemplate(code, env.otp.ttlMinutes);
+  await sendMail({ to: email, subject: 'Réinitialisation de mot de passe — TaxiLik.ma', text, html });
+  return { expiresAt };
+}
+
+module.exports = { requestOtp, verifyOtp, requestPasswordResetOtp };

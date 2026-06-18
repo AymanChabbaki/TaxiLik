@@ -3,7 +3,7 @@ const Ride = require('../models/Ride');
 const Otp = require('../models/Otp');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
-const { requestOtp, verifyOtp } = require('../services/otp.service');
+const { requestOtp, verifyOtp, requestPasswordResetOtp } = require('../services/otp.service');
 const { hashPassword, verifyPassword } = require('../utils/password');
 const { issueTokens, rotate, revoke, revokeAll } = require('../services/token.service');
 
@@ -178,6 +178,78 @@ const registerPushToken = asyncHandler(async (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/auth/forgot-password  { email }
+const forgotPassword = asyncHandler(async (req, res) => {
+  const email = String(req.body.email || '').toLowerCase().trim();
+  if (!EMAIL_RE.test(email)) throw ApiError.badRequest('A valid email is required');
+
+  const user = await User.findOne({ email });
+  // Only send if the account exists and is verified — never reveal whether email is registered
+  if (user && user.emailVerified && !user.isBlocked) {
+    await requestPasswordResetOtp(email, user.role);
+  }
+  res.json({ message: 'If this email exists, a reset code was sent', email });
+});
+
+// POST /api/auth/reset-password  { email, code, newPassword }
+const resetPassword = asyncHandler(async (req, res) => {
+  const email = String(req.body.email || '').toLowerCase().trim();
+  const code = String(req.body.code || '').trim();
+  const newPassword = String(req.body.newPassword || '');
+
+  if (!EMAIL_RE.test(email) || !code || !newPassword) {
+    throw ApiError.badRequest('All fields are required');
+  }
+  if (newPassword.length < 8) throw ApiError.badRequest('Password must be at least 8 characters');
+  if (newPassword.length > 128) throw ApiError.badRequest('Password is too long');
+
+  const result = await verifyOtp(email, code);
+  if (!result.ok) {
+    const map = {
+      no_otp: 'No active code. Request a new one.',
+      expired: 'Code expired. Request a new one.',
+      too_many_attempts: 'Too many attempts. Request a new code.',
+      invalid: 'Invalid code.',
+    };
+    throw ApiError.badRequest(map[result.reason] || 'Verification failed');
+  }
+
+  const user = await User.findOne({ email }).select('+passwordHash');
+  if (!user) throw ApiError.badRequest('Account not found');
+
+  user.passwordHash = hashPassword(newPassword);
+  await user.save();
+  await revokeAll(user._id);
+
+  res.json({ message: 'Password reset successfully. Please sign in.' });
+});
+
+// PATCH /api/auth/me/password  { currentPassword, newPassword }
+const changePassword = asyncHandler(async (req, res) => {
+  const currentPassword = String(req.body.currentPassword || '');
+  const newPassword = String(req.body.newPassword || '');
+
+  if (!currentPassword || !newPassword) {
+    throw ApiError.badRequest('Both passwords are required');
+  }
+  if (newPassword.length < 8) throw ApiError.badRequest('Password must be at least 8 characters');
+  if (newPassword.length > 128) throw ApiError.badRequest('Password is too long');
+
+  const user = await User.findById(req.user._id).select('+passwordHash');
+  if (!verifyPassword(currentPassword, user.passwordHash)) {
+    throw ApiError.unauthorized('Current password is incorrect');
+  }
+
+  user.passwordHash = hashPassword(newPassword);
+  await user.save();
+
+  // Revoke all sessions then re-issue so this device stays signed in
+  await revokeAll(user._id);
+  const { token, refreshToken } = await issueTokens(user);
+
+  res.json({ message: 'Password changed', token, refreshToken });
+});
+
 module.exports = {
   register,
   verifyEmail,
@@ -185,6 +257,9 @@ module.exports = {
   refresh,
   logout,
   resendOtp,
+  forgotPassword,
+  resetPassword,
+  changePassword,
   uploadAvatar,
   me,
   updateMe,

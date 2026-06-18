@@ -24,6 +24,9 @@ interface AuthContextValue extends AuthState {
   verifyEmail: (email: string, code: string) => Promise<{ user: User }>;
   login: (email: string, password: string) => Promise<{ user: User }>;
   resendOtp: (email: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   refreshUser: () => Promise<void>;
   updateProfile: (data: { fullName?: string; phone?: string }) => Promise<void>;
   uploadAvatar: (file: { uri: string; name: string; type: string }) => Promise<void>;
@@ -149,6 +152,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await apiRequest('/api/auth/resend-otp', { method: 'POST', body: { email } });
   }, []);
 
+  const forgotPassword = useCallback(async (email: string) => {
+    await apiRequest('/api/auth/forgot-password', { method: 'POST', body: { email } });
+  }, []);
+
+  const resetPassword = useCallback(async (email: string, code: string, newPassword: string) => {
+    await apiRequest('/api/auth/reset-password', { method: 'POST', body: { email, code, newPassword } });
+  }, []);
+
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string) => {
+      const res = await apiRequest<{ token: string; refreshToken: string }>(
+        '/api/auth/me/password',
+        { method: 'PATCH', token, body: { currentPassword, newPassword } }
+      );
+      await persistTokens(res.token, res.refreshToken);
+    },
+    [token, persistTokens]
+  );
+
   const refreshUser = useCallback(async () => {
     if (!token) return;
     const { user } = await apiRequest<{ user: User }>('/api/auth/me', { token });
@@ -210,6 +232,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       verifyEmail,
       login,
       resendOtp,
+      forgotPassword,
+      resetPassword,
+      changePassword,
       refreshUser,
       updateProfile,
       uploadAvatar,
@@ -217,7 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser,
       signOut,
     }),
-    [token, user, loading, register, verifyEmail, login, resendOtp, refreshUser, updateProfile, uploadAvatar, deleteAccount, signOut]
+    [token, user, loading, register, verifyEmail, login, resendOtp, forgotPassword, resetPassword, changePassword, refreshUser, updateProfile, uploadAvatar, deleteAccount, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
