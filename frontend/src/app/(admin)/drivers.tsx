@@ -5,6 +5,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Linking,
   Modal,
   Pressable,
   RefreshControl,
@@ -21,6 +22,18 @@ import { Radius, Spacing, Type } from '@/lib/theme';
 import { useTheme, useThemedStyles } from '@/lib/theme-context';
 import { adminApi, type AdminDocument, type AdminDriver } from '@/lib/adminApi';
 import { API_BASE_URL } from '@/lib/api';
+
+// URLs stored in the DB are already absolute (built by the upload controller).
+// Only prepend API_BASE_URL for legacy relative paths starting with "/".
+function mediaUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${API_BASE_URL}${url}`;
+}
+
+function isPdf(url: string): boolean {
+  return url.toLowerCase().endsWith('.pdf');
+}
 
 type Filter = 'all' | 'pending' | 'approved' | 'rejected';
 
@@ -197,7 +210,7 @@ function DriverDetailModal({
             {/* Driver header */}
             <View style={s.headerRow}>
               {driver.avatarUrl ? (
-                <Image source={{ uri: `${API_BASE_URL}${driver.avatarUrl}` }} style={s.avatarImg} />
+                <Image source={{ uri: mediaUrl(driver.avatarUrl) }} style={s.avatarImg} />
               ) : (
                 <View style={s.avatar}><Text style={s.avatarText}>{initial0}</Text></View>
               )}
@@ -276,11 +289,21 @@ function DriverDetailModal({
                   ) : null}
 
                   {doc?.url ? (
-                    <Image
-                      source={{ uri: `${API_BASE_URL}${doc.url}` }}
-                      style={s.docImg}
-                      resizeMode="contain"
-                    />
+                    isPdf(doc.url) ? (
+                      <Pressable
+                        style={[s.docImg, { alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: Spacing.sm }]}
+                        onPress={() => Linking.openURL(mediaUrl(doc.url))}
+                      >
+                        <Ionicons name="document-text-outline" size={28} color={colors.primary} />
+                        <Text style={{ ...Type.labelLg, color: colors.primary }}>Ouvrir le PDF</Text>
+                      </Pressable>
+                    ) : (
+                      <Image
+                        source={{ uri: mediaUrl(doc.url) }}
+                        style={s.docImg}
+                        resizeMode="contain"
+                      />
+                    )
                   ) : null}
 
                   {doc && (
