@@ -19,6 +19,10 @@ export interface LiveMapProps {
   destination?: LatLng | null;
   /** Keep the assigned driver centered while moving. */
   followAssigned?: boolean;
+  /** OSRM route polyline from pickup to destination. */
+  route?: LatLng[] | null;
+  /** Dashed line from the assigned driver to the pickup while en route. */
+  driverRoute?: LatLng[] | null;
   /** Status label chip shown over the map. */
   label?: string;
   dark?: boolean;

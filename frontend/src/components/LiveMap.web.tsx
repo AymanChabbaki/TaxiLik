@@ -59,6 +59,9 @@ export function LiveMap(props: LiveMapProps) {
   const pickupMarker = useRef<Leaflet.Marker | null>(null);
   const destMarker = useRef<Leaflet.Marker | null>(null);
   const driverMarkers = useRef<Map<string, Leaflet.Marker>>(new Map());
+  const routePolyRef = useRef<Leaflet.Polyline | null>(null);
+  const driverPolyRef = useRef<Leaflet.Polyline | null>(null);
+  const prevRouteKeyRef = useRef('');
   const [ready, setReady] = useState(false);
 
   // Lazy-load Leaflet (browser only) and init the map once.
@@ -171,6 +174,41 @@ export function LiveMap(props: LiveMapProps) {
       mapRef.current.panTo([center.lat, center.lng], { animate: true });
     }
   }, [ready, center, followAssigned]);
+
+  // Route polyline (pickup → destination).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || !L) return;
+    const coords = props.route;
+    if (coords && coords.length > 1) {
+      const lls = coords.map((p): [number, number] => [p.lat, p.lng]);
+      if (routePolyRef.current) routePolyRef.current.setLatLngs(lls);
+      else routePolyRef.current = L.polyline(lls, { color: BRAND, weight: 4, opacity: 0.85 }).addTo(map);
+      const key = `${coords[0].lat.toFixed(4)},${coords[coords.length - 1].lat.toFixed(4)}`;
+      if (key !== prevRouteKeyRef.current && !assignedDriver) {
+        try { map.fitBounds(routePolyRef.current.getBounds(), { padding: [50, 50] }); } catch {}
+      }
+      prevRouteKeyRef.current = key;
+    } else {
+      if (routePolyRef.current) { map.removeLayer(routePolyRef.current); routePolyRef.current = null; }
+      prevRouteKeyRef.current = '';
+    }
+  }, [ready, props.route, assignedDriver]);
+
+  // Driver-to-pickup dashed line while driver is en route.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || !L) return;
+    const coords = props.driverRoute;
+    if (coords && coords.length > 1) {
+      const lls = coords.map((p): [number, number] => [p.lat, p.lng]);
+      if (driverPolyRef.current) driverPolyRef.current.setLatLngs(lls);
+      else driverPolyRef.current = L.polyline(lls, { color: BRAND, weight: 2.5, opacity: 0.6, dashArray: '8 6' }).addTo(map);
+    } else if (driverPolyRef.current) {
+      map.removeLayer(driverPolyRef.current);
+      driverPolyRef.current = null;
+    }
+  }, [ready, props.driverRoute]);
 
   return (
     <View style={[{ flex: 1, overflow: 'hidden' }, props.style]}>

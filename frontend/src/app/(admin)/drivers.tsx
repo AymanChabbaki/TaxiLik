@@ -5,6 +5,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Keyboard,
   Linking,
   Modal,
   Pressable,
@@ -189,11 +190,12 @@ function DriverDetailModal({
 
   const initial0 = (driver.fullName || driver.email || '?')[0].toUpperCase();
   const joinedDate = driver.createdAt ? new Date(driver.createdAt).toLocaleDateString() : '—';
+  const [avatarErr, setAvatarErr] = useState(false);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={s.overlay}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <Pressable style={{ flex: 1 }} onPress={() => { Keyboard.dismiss(); onClose(); }} />
         <View style={s.sheet}>
           {/* Fixed header outside ScrollView — close button is always tappable */}
           <View style={s.sheetHeader}>
@@ -206,11 +208,20 @@ function DriverDetailModal({
             </View>
           </View>
 
-          <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={s.scroll}
+            showsVerticalScrollIndicator={false}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
+          >
             {/* Driver header */}
             <View style={s.headerRow}>
-              {driver.avatarUrl ? (
-                <Image source={{ uri: mediaUrl(driver.avatarUrl) }} style={s.avatarImg} />
+              {driver.avatarUrl && !avatarErr ? (
+                <Image
+                  source={{ uri: mediaUrl(driver.avatarUrl) }}
+                  style={s.avatarImg}
+                  onError={() => setAvatarErr(true)}
+                />
               ) : (
                 <View style={s.avatar}><Text style={s.avatarText}>{initial0}</Text></View>
               )}
@@ -457,13 +468,22 @@ function DriverCard({
 
   const docsApproved = driver.driver.documents.filter((d) => d.status === 'approved').length;
   const initial = (driver.fullName || driver.email || '?')[0].toUpperCase();
+  const [cardAvatarErr, setCardAvatarErr] = useState(false);
 
   return (
     <Pressable style={s.card} onPress={onPress}>
       <View style={s.row}>
-        <View style={s.avatar}>
-          <Text style={s.avatarText}>{initial}</Text>
-        </View>
+        {driver.avatarUrl && !cardAvatarErr ? (
+          <Image
+            source={{ uri: mediaUrl(driver.avatarUrl) }}
+            style={[s.avatar, { overflow: 'hidden' }]}
+            onError={() => setCardAvatarErr(true)}
+          />
+        ) : (
+          <View style={s.avatar}>
+            <Text style={s.avatarText}>{initial}</Text>
+          </View>
+        )}
         <View style={s.info}>
           <Text style={s.name} numberOfLines={1}>{driver.fullName || driver.email}</Text>
           <Text style={s.email} numberOfLines={1}>{driver.email}</Text>

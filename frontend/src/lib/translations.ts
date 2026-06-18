@@ -314,6 +314,9 @@ const fr = {
   'dprofile.license': 'Licence',
   'dprofile.documents': 'DOCUMENTS',
   'dprofile.approved': 'Compte vérifié',
+  'dprofile.rating': 'Note moyenne',
+  'dprofile.noRating': 'Pas encore noté',
+  'dprofile.ratingLabel': '{score} · {count} avis',
 
   // Admin
   'admin.title': 'Espace Administrateur',
@@ -694,6 +697,9 @@ const en: Dict = {
   'dprofile.license': 'License',
   'dprofile.documents': 'DOCUMENTS',
   'dprofile.approved': 'Verified account',
+  'dprofile.rating': 'Average rating',
+  'dprofile.noRating': 'Not rated yet',
+  'dprofile.ratingLabel': '{score} · {count} reviews',
 
   'admin.title': 'Administrator Area',
   'admin.body': 'Platform management (document validation, users, statistics) is done from the web admin panel.',
@@ -1062,6 +1068,9 @@ const ar: Dict = {
   'dprofile.license': 'الرخصة',
   'dprofile.documents': 'الوثائق',
   'dprofile.approved': 'حساب موثّق',
+  'dprofile.rating': 'متوسط التقييم',
+  'dprofile.noRating': 'غير مقيّم بعد',
+  'dprofile.ratingLabel': '{score} · {count} تقييم',
 
   'admin.title': 'مساحة المشرف',
   'admin.body': 'تتم إدارة المنصة (التحقق من الوثائق، المستخدمون، الإحصائيات) من لوحة الإدارة على الويب.',

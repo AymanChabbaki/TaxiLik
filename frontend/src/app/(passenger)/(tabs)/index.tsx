@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -31,6 +31,25 @@ import { Radius, Spacing, Type, shadow } from '@/lib/theme';
 import { useTheme, useThemedStyles } from '@/lib/theme-context';
 import type { Coords, Fare, Ride } from '@/lib/types';
 
+async function fetchOsrmRoute(
+  from: { lat: number; lng: number },
+  to: { lat: number; lng: number },
+  signal?: AbortSignal
+): Promise<{ lat: number; lng: number }[] | null> {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+    const res = await fetch(url, { signal });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.code === 'Ok' && data.routes?.[0]) {
+      return (data.routes[0].geometry.coordinates as [number, number][]).map(([lng, lat]) => ({ lat, lng }));
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 const statusLabel = (t: (k: any) => string, status: string) =>
   t(`status.${status}` as any);
 
@@ -56,6 +75,7 @@ export default function BookingScreen() {
   const [chatOpen, setChatOpen] = useState(false);
   const [picking, setPicking] = useState<'pickup' | 'destination' | null>(null);
   const [completedRide, setCompletedRide] = useState<Ride | null>(null);
+  const [routeCoords, setRouteCoords] = useState<{ lat: number; lng: number }[]>([]);
 
   // Fetch GPS and set it as the pickup ("Position actuelle").
   const locateMe = useCallback(async () => {
@@ -219,6 +239,31 @@ export default function BookingScreen() {
     return () => clearTimeout(t);
   }, [token, pickup, destination]);
 
+  const routeAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    if (!destination) {
+      setRouteCoords([]);
+      routeAbortRef.current?.abort();
+      return;
+    }
+    const id = setTimeout(async () => {
+      routeAbortRef.current?.abort();
+      const ctrl = new AbortController();
+      routeAbortRef.current = ctrl;
+      const coords = await fetchOsrmRoute(pickup.coords, destination.coords, ctrl.signal);
+      if (coords) setRouteCoords(coords);
+    }, 500);
+    return () => clearTimeout(id);
+  }, [pickup.coords.lat, pickup.coords.lng, destination?.coords.lat, destination?.coords.lng]);
+
+  const driverRouteLine = useMemo(() => {
+    if (!driverPos || activeRide?.status !== 'accepted') return null;
+    return [
+      { lat: driverPos.lat, lng: driverPos.lng },
+      { lat: pickup.coords.lat, lng: pickup.coords.lng },
+    ];
+  }, [driverPos?.lat, driverPos?.lng, activeRide?.status, pickup.coords.lat, pickup.coords.lng]);
+
   const onRequest = useCallback(async () => {
     if (!token || !destination) return;
     setRequesting(true);
@@ -285,10 +330,12 @@ export default function BookingScreen() {
         user={{ lat: pickup.coords.lat, lng: pickup.coords.lng }}
         drivers={activeRide ? [] : nearby}
         pickup={activeRide ? { lat: pickup.coords.lat, lng: pickup.coords.lng } : null}
-        destination={activeRide && destination ? { lat: destination.coords.lat, lng: destination.coords.lng } : null}
+        destination={destination ? { lat: destination.coords.lat, lng: destination.coords.lng } : null}
         assignedDriver={driverPos}
         followAssigned={!!driverPos && activeRide?.status !== 'started'}
         center={{ lat: pickup.coords.lat, lng: pickup.coords.lng }}
+        route={routeCoords.length > 1 ? routeCoords : null}
+        driverRoute={driverRouteLine}
       />
 
       <View style={s.sheet}>
@@ -357,6 +404,7 @@ export default function BookingScreen() {
                 </View>
                 {fare ? (
                   <Text style={s.fareBasis}>
+                    {`${fare.distanceKm.toFixed(1)} km · `}
                     {t('booking.fareBasis', {
                       perKm: fare.perKm.toFixed(2),
                       pickup: fare.pickupCharge.toFixed(2),

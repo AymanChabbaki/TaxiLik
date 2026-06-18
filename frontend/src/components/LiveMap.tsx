@@ -32,6 +32,7 @@ function dot(c){return '<div style="position:relative;width:22px;height:22px"><d
 function pin(c){return '<div style="transform:translateY(-6px)"><svg width="26" height="26" viewBox="0 0 24 24" fill="'+c+'"><path d="M12 2C7.6 2 4 5.6 4 10c0 5.4 7 11.6 7.3 11.8a1 1 0 001.4 0C13 21.6 20 15.4 20 10c0-4.4-3.6-8-8-8zm0 11a3 3 0 110-6 3 3 0 010 6z"/></svg></div>';}
 var M={user:null,pickup:null,dest:null,assigned:null,drivers:{}};
 function place(key,pos,html,size){ if(!pos){ if(M[key]){map.removeLayer(M[key]);M[key]=null;} return;} if(M[key])M[key].setLatLng([pos.lat,pos.lng]); else M[key]=L.marker([pos.lat,pos.lng],{icon:icon(html,size)}).addTo(map);}
+var routePoly=null,driverPoly=null,lastRouteLen=-1;
 var first=true;
 window.TLK={update:function(s){
   setTilesIf(s.dark);
@@ -43,6 +44,11 @@ window.TLK={update:function(s){
   place('assigned',s.assignedDriver,car(BRAND,40),40);
   var seen={};(s.drivers||[]).forEach(function(d){seen[d.id]=1; if(M.drivers[d.id])M.drivers[d.id].setLatLng([d.lat,d.lng]); else M.drivers[d.id]=L.marker([d.lat,d.lng],{icon:icon(car(s.dark?'#fff':'#1F2430',30),30)}).addTo(map);});
   Object.keys(M.drivers).forEach(function(id){if(!seen[id]){map.removeLayer(M.drivers[id]);delete M.drivers[id];}});
+  var r=s.route||[];
+  if(r.length>1){var rl=r.map(function(p){return[p.lat,p.lng]});if(routePoly)routePoly.setLatLngs(rl);else{routePoly=L.polyline(rl,{color:BRAND,weight:4,opacity:.85,lineCap:'round',lineJoin:'round'}).addTo(map);}if(r.length!==lastRouteLen&&!s.assignedDriver){try{map.fitBounds(routePoly.getBounds(),{padding:[50,50]});}catch(e){}}}else if(routePoly){map.removeLayer(routePoly);routePoly=null;}
+  lastRouteLen=r.length;
+  var dr=s.driverRoute||[];
+  if(dr.length>1){var dl=dr.map(function(p){return[p.lat,p.lng]});if(driverPoly)driverPoly.setLatLngs(dl);else{driverPoly=L.polyline(dl,{color:BRAND,weight:2.5,opacity:.6,dashArray:'8 6'}).addTo(map);}}else if(driverPoly){map.removeLayer(driverPoly);driverPoly=null;}
   var c=s.followAssigned&&s.assignedDriver?s.assignedDriver:(first?s.center:null);
   if(c){map.panTo([c.lat,c.lng],{animate:!first});}
   first=false;
@@ -68,8 +74,10 @@ export function LiveMap(props: LiveMapProps) {
       dark: !!props.dark,
       followAssigned: !!props.followAssigned,
       center: props.center ?? props.user ?? props.pickup ?? null,
+      route: props.route ?? null,
+      driverRoute: props.driverRoute ?? null,
     }),
-    [props.user, props.pickup, props.destination, props.assignedDriver, props.drivers, props.viewerRole, props.dark, props.followAssigned, props.center]
+    [props.user, props.pickup, props.destination, props.assignedDriver, props.drivers, props.viewerRole, props.dark, props.followAssigned, props.center, props.route, props.driverRoute]
   );
 
   useEffect(() => {

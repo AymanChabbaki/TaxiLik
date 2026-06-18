@@ -46,6 +46,25 @@ export default function DriverProfile() {
             <Ionicons name="shield-checkmark" size={14} color={colors.success} />
             <Text style={s.verifiedText}>{t('dprofile.approved')}</Text>
           </View>
+          <View style={s.ratingBadge}>
+            {(user?.ratingCount ?? 0) > 0 ? (
+              <>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Ionicons
+                    key={n}
+                    name={n <= Math.round(user!.rating!) ? 'star' : 'star-outline'}
+                    size={16}
+                    color={colors.warning}
+                  />
+                ))}
+                <Text style={s.ratingText}>
+                  {(user!.rating!).toFixed(1)} · {user!.ratingCount} {t('dprofile.rating')}
+                </Text>
+              </>
+            ) : (
+              <Text style={s.ratingText}>{t('dprofile.noRating')}</Text>
+            )}
+          </View>
         </View>
 
         <View style={s.section}>
@@ -101,6 +120,8 @@ function useStyles() {
     email: { ...Type.labelMd, color: c.textSecondary },
     verified: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: c.surfaceAlt, paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: Radius.full },
     verifiedText: { ...Type.labelSm, color: c.success },
+    ratingBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    ratingText: { ...Type.labelSm, color: c.textSecondary },
     section: { gap: Spacing.sm },
     label: { ...Type.labelSm, color: c.textMuted, marginLeft: Spacing.xs },
     group: { backgroundColor: c.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: c.border, overflow: 'hidden' },

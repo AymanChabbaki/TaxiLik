@@ -1,6 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Modal, Pressable, Text, TextInput, View } from 'react-native';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { useI18n } from '@/lib/i18n';
 import { rateRide } from '@/lib/rides';
@@ -24,6 +33,7 @@ export function RatingModal({ ride, token, onDone }: Props) {
 
   const onSubmit = async () => {
     if (stars === 0) return;
+    Keyboard.dismiss();
     setSubmitting(true);
     try {
       await rateRide(token, ride._id, stars, comment.trim() || undefined);
@@ -37,47 +47,54 @@ export function RatingModal({ ride, token, onDone }: Props) {
 
   return (
     <Modal visible animationType="slide" transparent onRequestClose={onDone}>
-      <View style={s.backdrop}>
-        <View style={s.sheet}>
-          <View style={s.handle} />
-          <Text style={s.title}>{t('rating.title')}</Text>
-          <Text style={s.subtitle}>{t('rating.driver')}</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <Pressable style={s.backdrop} onPress={Keyboard.dismiss}>
+          <View style={s.sheet}>
+            <View style={s.handle} />
+            <Text style={s.title}>{t('rating.title')}</Text>
+            <Text style={s.subtitle}>{t('rating.driver')}</Text>
 
-          <View style={s.stars}>
-            {[1, 2, 3, 4, 5].map((n) => (
-              <Pressable key={n} onPress={() => setStars(n)} hitSlop={8}>
-                <Ionicons
-                  name={n <= stars ? 'star' : 'star-outline'}
-                  size={40}
-                  color={n <= stars ? colors.warning : colors.border}
-                />
-              </Pressable>
-            ))}
+            <View style={s.stars}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Pressable key={n} onPress={() => setStars(n)} hitSlop={8}>
+                  <Ionicons
+                    name={n <= stars ? 'star' : 'star-outline'}
+                    size={40}
+                    color={n <= stars ? colors.warning : colors.border}
+                  />
+                </Pressable>
+              ))}
+            </View>
+
+            <TextInput
+              style={s.input}
+              placeholder={t('rating.placeholder')}
+              placeholderTextColor={colors.textMuted}
+              value={comment}
+              onChangeText={setComment}
+              maxLength={300}
+              multiline
+              blurOnSubmit
+              returnKeyType="done"
+            />
+
+            <Pressable
+              style={[s.btn, stars === 0 && s.btnDisabled]}
+              onPress={onSubmit}
+              disabled={stars === 0 || submitting}
+            >
+              <Text style={s.btnText}>{t('rating.submit')}</Text>
+            </Pressable>
+
+            <Pressable style={s.skip} onPress={onDone}>
+              <Text style={s.skipText}>{t('rating.skip')}</Text>
+            </Pressable>
           </View>
-
-          <TextInput
-            style={s.input}
-            placeholder={t('rating.placeholder')}
-            placeholderTextColor={colors.textMuted}
-            value={comment}
-            onChangeText={setComment}
-            maxLength={300}
-            multiline
-          />
-
-          <Pressable
-            style={[s.btn, stars === 0 && s.btnDisabled]}
-            onPress={onSubmit}
-            disabled={stars === 0 || submitting}
-          >
-            <Text style={s.btnText}>{t('rating.submit')}</Text>
-          </Pressable>
-
-          <Pressable style={s.skip} onPress={onDone}>
-            <Text style={s.skipText}>{t('rating.skip')}</Text>
-          </Pressable>
-        </View>
-      </View>
+        </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
